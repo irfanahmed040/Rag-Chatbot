@@ -70,7 +70,7 @@ def chat(req: ChatRequest):
     context = "\n\n".join(top_chunks(req.question, req.chunks, req.embeddings))
 
     prompt = f"""Answer the question using only the context below.
-If the answer is not in the context, say you don't know. Reply in plain text but also explain nicely and dont just give the context.
+If the answer is not in the context, say you don't know. Reply in plain text but also explain nicely and dont just give the context. Do not use any kind of markup or markdown.
 
 Context:
 {context}
