@@ -1,6 +1,7 @@
-// The text chunks of the uploaded files live here, in the browser.
+// The text chunks of the uploaded files (and their embeddings) live here, in the browser.
 // Every question sends them to the server along with the question.
 let chunks = [];
+let embeddings = [];
 
 const fileInput = document.getElementById("fileInput");
 const uploadBtn = document.getElementById("uploadBtn");
@@ -42,7 +43,7 @@ uploadBtn.addEventListener("click", async () => {
   }
 
   uploadBtn.disabled = true;
-  statusText.textContent = "Reading files...";
+  statusText.textContent = "Reading files and creating embeddings...";
 
   try {
     const res = await fetch("/api/upload", { method: "POST", body: formData });
@@ -50,6 +51,7 @@ uploadBtn.addEventListener("click", async () => {
 
     const data = await res.json();
     chunks = data.chunks;
+    embeddings = data.embeddings;
     messages.innerHTML = "";
     statusText.textContent = `✅ Ready! ${chunks.length} chunks loaded. Ask a question.`;
   } catch (err) {
@@ -78,7 +80,7 @@ chatForm.addEventListener("submit", async (e) => {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, chunks }),
+      body: JSON.stringify({ question, chunks, embeddings }),
     });
     if (!res.ok) throw new Error(await errorText(res));
 

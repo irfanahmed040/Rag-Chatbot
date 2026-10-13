@@ -1,13 +1,13 @@
 import io
 import os
-import re
 
 import docx2txt
+import numpy as np
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
-from langchain_community.retrievers import BM25Retriever
 from langchain_groq import ChatGroq
+from langchain_mistralai import MistralAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pydantic import BaseModel
 from pypdf import PdfReader
@@ -16,6 +16,7 @@ load_dotenv()
 
 app = FastAPI()
 llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
+embeddings = MistralAIEmbeddings(model="mistral-embed")  # text -> list of 1024 numbers
 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 
 
@@ -31,14 +32,16 @@ def read_text(filename: str, data: bytes) -> str:
     return data.decode("utf-8", errors="ignore")  # .txt, .md, .csv
 
 
-def tokenize(text: str) -> list[str]:
-    """Lowercase words only, so 'Price,' and 'price' match in keyword search."""
-    return re.findall(r"\w+", text.lower())
+def top_chunks(question: str, chunks: list[str], chunk_vectors: list[list[float]], k: int = 4):
+    """Return the k chunks whose meaning is closest to the question (cosine similarity)."""
+    q = np.array(embeddings.embed_query(question))
+    m = np.array(chunk_vectors)
+    scores = m @ q / (np.linalg.norm(m, axis=1) * np.linalg.norm(q))
+    best = np.argsort(scores)[::-1][:k]  # indexes of the highest scores
+    return [chunks[i] for i in best]
 
 
-# ---------- 1. Upload: file -> text chunks ----------
-# Vercel functions don't remember anything between requests,
-# so we send the chunks back to the browser and it keeps them.
+#chunkings
 @app.post("/api/upload")
 async def upload(files: list[UploadFile]):
     chunks = []
@@ -48,20 +51,23 @@ async def upload(files: list[UploadFile]):
 
     if not chunks:
         raise HTTPException(400, "No text found. Scanned/image PDFs are not supported.")
-    return {"chunks": chunks}
+
+    # Embed every chunk. Rounded to 4 decimals to keep the response small.
+    vectors = [[round(x, 4) for x in v] for v in embeddings.embed_documents(chunks)]
+    return {"chunks": chunks, "embeddings": vectors}
 
 
 # ---------- 2. Chat: question + chunks -> answer ----------
 class ChatRequest(BaseModel):
     question: str
     chunks: list[str]
+    embeddings: list[list[float]]
 
 
 @app.post("/api/chat")
 def chat(req: ChatRequest):
-    # Find the 4 chunks that best match the question's keywords (BM25)
-    retriever = BM25Retriever.from_texts(req.chunks, preprocess_func=tokenize, k=4)
-    context = "\n\n".join(doc.page_content for doc in retriever.invoke(req.question))
+    # Find the 4 chunks closest in meaning to the question
+    context = "\n\n".join(top_chunks(req.question, req.chunks, req.embeddings))
 
     prompt = f"""Answer the question using only the context below.
 If the answer is not in the context, say you don't know. Reply in plain text.

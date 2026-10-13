@@ -1,9 +1,9 @@
 fastapi
 python-multipart
 python-dotenv
-langchain-community
 langchain-groq
+langchain-mistralai
 langchain-text-splitters
-rank-bm25
+numpy
 pypdf
 docx2txt
