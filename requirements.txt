@@ -1,0 +1,9 @@
+fastapi
+python-multipart
+python-dotenv
+langchain-community
+langchain-groq
+langchain-text-splitters
+rank-bm25
+pypdf
+docx2txt

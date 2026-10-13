@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG Chatbot</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <h1>📄 RAG Chatbot</h1>
+
+    <!-- Step 1: upload files -->
+    <div class="upload">
+      <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.md,.csv" />
+      <button id="uploadBtn">Process files</button>
+      <p id="status">Upload a PDF, DOCX, TXT, MD or CSV to start.</p>
+    </div>
+
+    <!-- Step 2: chat -->
+    <div id="messages" class="messages"></div>
+
+    <form id="chatForm" class="chat-form">
+      <input type="text" id="questionInput" placeholder="Ask something about your files" autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
